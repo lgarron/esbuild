@@ -3278,6 +3278,8 @@ func (p *parser) parsePrefix(level js_ast.L, errors *deferredErrors, flags exprF
 	case js_lexer.TNew:
 		p.lexer.Next()
 
+		isURLConstructor := p.lexer.Raw() == "URL"
+
 		// Special-case the weird "new.target" expression here
 		if p.lexer.Token == js_lexer.TDot {
 			p.lexer.Next()
@@ -3295,6 +3297,10 @@ func (p *parser) parsePrefix(level js_ast.L, errors *deferredErrors, flags exprF
 
 		if p.lexer.Token == js_lexer.TOpenParen {
 			args = p.parseCallArgs()
+		}
+
+		if isURLConstructor && len(args) == 2 {
+			// TODO: Record as a relative path to an entry
 		}
 
 		return js_ast.Expr{Loc: loc, Data: &js_ast.ENew{Target: target, Args: args}}
