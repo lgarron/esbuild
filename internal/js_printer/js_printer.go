@@ -1698,7 +1698,7 @@ func (p *printer) printExpr(expr js_ast.Expr, level js_ast.L, flags printExprFla
 		p.printRequireOrImportExpr(e.ImportRecordIndex, leadingInteriorComments, level, flags)
 
 	case *js_ast.ERelativeURL:
-		p.printExpr(e.Expr)
+		p.printExpr(e.Expr, level, flags)
 
 	case *js_ast.EImportCall:
 		var leadingInteriorComments []js_ast.Comment

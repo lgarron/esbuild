@@ -12892,13 +12892,17 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 		}), exprOut{}
 
 	case *js_ast.ERelativeURL:
+		// TODO:
+		// - Extract the `Loc` of the relative path
+		// - Add to import records for the parser.
+		// - Ensure expression will have a rewritten relative URL when printed.
 
 		// if str, ok := arg.Data.(*js_ast.EString); ok {
-		importRecordIndex := p.addImportRecord(ast.RelativeURL, e.Expr.Loc, js_lexer.UTF16ToString(str.Value))
-		if (isAwaitTarget && p.fnOrArrowDataVisit.tryBodyCount != 0) || isThenCatchTarget {
-			p.importRecords[importRecordIndex].Flags |= ast.HandlesImportErrors
-		}
-		p.importRecordsForCurrentPart = append(p.importRecordsForCurrentPart, importRecordIndex)
+		// importRecordIndex := p.addImportRecord(ast.RelativeURL, e.Expr.Loc, js_lexer.UTF16ToString(str.Value), )
+		// if (isAwaitTarget && p.fnOrArrowDataVisit.tryBodyCount != 0) || isThenCatchTarget {
+		// 	p.importRecords[importRecordIndex].Flags |= ast.HandlesImportErrors
+		// }
+		// p.importRecordsForCurrentPart = append(p.importRecordsForCurrentPart, importRecordIndex)
 		return expr, exprOut{}
 
 	case *js_ast.ECall:

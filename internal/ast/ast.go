@@ -32,6 +32,9 @@ const (
 
 	// A CSS "url(...)" token
 	ImportURL
+
+	// A `new URL(..., import.meta.url)` call
+	RelativeURL
 )
 
 func (kind ImportKind) StringForMetafile() string {
