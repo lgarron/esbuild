@@ -3305,9 +3305,11 @@ func (p *parser) parsePrefix(level js_ast.L, errors *deferredErrors, flags exprF
 				fmt.Printf("first argument is a string: %v\n", js_lexer.UTF16ToString(s.Value))
 				if eDot, ok := args[1].Data.(*js_ast.EDot); ok {
 					fmt.Printf("second argument is an EDot %#v  %#v\n", eDot.Name, eDot.Target)
-					var eDotNamePtr interface{} = &eDot.Name // TODO: is there a more direct way?
-					if _, ok := eDotNamePtr.(*js_ast.EImportMeta); ok {
+					if _, ok := eDot.Target.Data.(*js_ast.EImportMeta); ok {
 						fmt.Printf("EDot target is import.meta\n")
+						if eDot.Name == "url" {
+							fmt.Printf("totes a match!\n")
+						}
 					}
 				}
 			}
