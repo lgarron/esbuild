@@ -3300,6 +3300,15 @@ func (p *parser) parsePrefix(level js_ast.L, errors *deferredErrors, flags exprF
 		}
 
 		if isURLConstructor && len(args) == 2 {
+			fmt.Printf("%#v\n", args[0])
+			fmt.Printf("%#v\n", args[1])
+			_, ok := args[0].Data.(*js_ast.EString)
+			if ok {
+				fmt.Printf("passed 1!\n", args[1])
+			}
+			// if args[1] ==  {
+
+			// }
 			// TODO: Record as a relative path to an entry
 		}
 
