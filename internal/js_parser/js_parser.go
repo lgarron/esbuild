@@ -3300,14 +3300,15 @@ func (p *parser) parsePrefix(level js_ast.L, errors *deferredErrors, flags exprF
 		}
 
 		if isURLConstructor && len(args) == 2 {
-			fmt.Printf("URL constructor found \n")
+			fmt.Printf("\n\nURL constructor found \n")
 			if s, ok := args[0].Data.(*js_ast.EString); ok {
 				fmt.Printf("first argument is a string: %v\n", js_lexer.UTF16ToString(s.Value))
-				if e, ok := args[1].Data.(*js_ast.EDot); ok {
-					fmt.Printf("second argument is an EDot %#v  %#v\n", e.Name, e.Target)
-					// if eName, ok := *e.Name.(*js_ast.EImportMeta); ok {
-					// 	fmt.Printf("EDot name is import.meta\n")
-					// }
+				if eDot, ok := args[1].Data.(*js_ast.EDot); ok {
+					fmt.Printf("second argument is an EDot %#v  %#v\n", eDot.Name, eDot.Target)
+					var eDotNamePtr interface{} = &eDot.Name // TODO: is there a more direct way?
+					if _, ok := eDotNamePtr.(*js_ast.EImportMeta); ok {
+						fmt.Printf("EDot target is import.meta\n")
+					}
 				}
 			}
 			// if args[1] ==  {
