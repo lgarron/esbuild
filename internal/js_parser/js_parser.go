@@ -3,6 +3,7 @@ package js_parser
 import (
 	"fmt"
 	"math"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -236,6 +237,7 @@ type parser struct {
 
 	esmImportStatementKeyword logger.Range
 	esmImportMeta             logger.Range
+	esmImportMetaResolve      logger.Range
 	esmExportKeyword          logger.Range
 	enclosingClassKeyword     logger.Range
 	topLevelAwaitKeyword      logger.Range
@@ -3936,8 +3938,61 @@ func (p *parser) parseImportExpr(loc logger.Loc, level js_ast.L) js_ast.Expr {
 		if !p.lexer.IsContextualKeyword("meta") {
 			p.lexer.ExpectedString("\"meta\"")
 		}
-		p.esmImportMeta = logger.Range{Loc: loc, Len: p.lexer.Range().End() - loc.Start}
+		loggerRange := logger.Range{Loc: loc, Len: p.lexer.Range().End() - loc.Start}
 		p.lexer.Next()
+		// Handle `import.meta.resolve("[import path]")` (https://github.com/evanw/esbuild/issues/2866)
+		if p.lexer.Token == js_lexer.TDot {
+			fmt.Fprintf(os.Stderr, "dot next!")
+			p.lexer.Next()
+			if p.lexer.IsContextualKeyword("resolve") {
+				fmt.Fprintf(os.Stderr, "resolve!!")
+				p.lexer.Next()
+				p.lexer.Expect(js_lexer.TOpenParen)
+				fmt.Fprintf(os.Stderr, "paren!!!")
+				value := p.parseExpr(js_ast.LLowest)
+				closeParenLoc := p.saveExprCommentsHere()
+				p.lexer.Expect(js_lexer.TCloseParen)
+				p.esmImportMetaResolve = loggerRange
+				return js_ast.Expr{Loc: loc, Data: &js_ast.EImportMetaResolve{
+					Expr:          value,
+					CloseParenLoc: closeParenLoc,
+				}}
+			}
+			p.esmImportMeta = loggerRange
+		}
+
+		// isImportGraphURL := false
+
+		// e.Target = p.visitExpr(e.Target)
+		// if id, ok := e.Target.Data.(*js_ast.EIdentifier); ok {
+		// 	symbol := p.symbols[id.Ref.InnerIndex]
+		// 	if symbol.OriginalName == "URL" && len(e.Args) == 2 {
+		// 		if s, ok := e.Args[0].Data.(*js_ast.EString); ok {
+		// 			if eDot, ok := e.Args[1].Data.(*js_ast.EDot); ok {
+		// 				if _, ok := eDot.Target.Data.(*js_ast.EImportMeta); ok {
+		// 					if eDot.Name == "url" {
+		// 						// TODO: This should:
+		// 						// - Include more file types.
+		// 						// - Understand the relative JS and TS files even if the file extension is not provided (like in TypeScript).
+		// 						// - Check if the actual file exists in the import graph?
+		// 						isInImportGraph := strings.HasSuffix(helpers.UTF16ToString(s.Value), ".js") || strings.HasSuffix(helpers.UTF16ToString(s.Value), ".ts")
+
+		// 						if isInImportGraph {
+		// 							isImportGraphURL = true
+		// 						}
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// if isImportGraphURL {
+		// 	s, _ := e.Args[0].Data.(*js_ast.EString)
+		// 	importRecordIndex := p.addImportRecord(ast.ImportDynamic, e.Args[0].Loc, helpers.UTF16ToString(s.Value), nil)
+		// 	p.importRecordsForCurrentPart = append(p.importRecordsForCurrentPart, importRecordIndex)
+		// 	e.Args[0] = js_ast.Expr{Loc: e.Args[0].Loc, Data: &js_ast.ERelativeURL{
+		// 		ImportRecordIndex: importRecordIndex,
+		// 	}}
 		return js_ast.Expr{Loc: loc, Data: &js_ast.EImportMeta{RangeLen: p.esmImportMeta.Len}}
 	}
 
@@ -9233,6 +9288,21 @@ func (p *parser) substituteSingleUseSymbolInExpr(
 			return expr, substituteContinue
 		}
 
+	// TODO
+	case *js_ast.EImportMetaResolve:
+		if value, status := p.substituteSingleUseSymbolInExpr(e.Expr, ref, replacement, replacementCanBeRemoved); status != substituteContinue {
+			e.Expr = value
+			return expr, status
+		}
+
+		// The "import()" expression has side effects but the side effects are
+		// always asynchronous so there is no way for the side effects to modify
+		// the replacement value. So it's ok to reorder the replacement value
+		// past the "import()" expression assuming everything else checks out.
+		if replacementCanBeRemoved && js_ast.ExprCanBeRemovedIfUnused(e.Expr, p.isUnbound) {
+			return expr, substituteContinue
+		}
+
 	case *js_ast.EUnary:
 		switch e.Op {
 		case js_ast.UnOpPreInc, js_ast.UnOpPostInc, js_ast.UnOpPreDec, js_ast.UnOpPostDec, js_ast.UnOpDelete:
@@ -11711,6 +11781,11 @@ func (p *parser) isDotOrIndexDefineMatch(expr js_ast.Expr, parts []string) bool 
 	case *js_ast.EImportMeta:
 		// Allow matching on "import.meta"
 		return len(parts) == 2 && parts[0] == "import" && parts[1] == "meta"
+
+	// TODO?
+	case *js_ast.EImportMetaResolve:
+		// Allow matching on "import.meta.resolve"
+		return len(parts) == 3 && parts[0] == "import" && parts[1] == "meta" && parts[2] == "resolve"
 
 	case *js_ast.EIdentifier:
 		// The last expression must be an identifier
@@ -14202,6 +14277,14 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 				CloseParenLoc: e.CloseParenLoc,
 			}}
 		}), exprOut{}
+
+	case *js_ast.EImportMetaResolve:
+		return js_ast.Expr{Loc: expr.Loc, Data: &js_ast.EImportMetaResolve{
+			Expr:          p.visitExpr(e.Expr),
+			CloseParenLoc: e.CloseParenLoc,
+		}}, exprOut{}
+
+		// TODO
 
 	case *js_ast.ECall:
 		p.callTarget = e.Target.Data
@@ -17011,6 +17094,7 @@ const (
 	whyESMUnknown whyESM = iota
 	whyESMExportKeyword
 	whyESMImportMeta
+	whyESMImportMetaResolve
 	whyESMTopLevelAwait
 	whyESMFileMJS
 	whyESMFileMTS
@@ -17029,6 +17113,10 @@ func (p *parser) whyESModule() (whyESM, []logger.MsgData) {
 	case p.esmImportMeta.Len > 0:
 		return whyESMImportMeta, []logger.MsgData{p.tracker.MsgData(p.esmImportMeta,
 			because+" of the use of \"import.meta\" here:")}
+
+	case p.esmImportMetaResolve.Len > 0:
+		return whyESMImportMetaResolve, []logger.MsgData{p.tracker.MsgData(p.esmImportMeta,
+			because+" of the use of \"import.meta.resolve\" here:")}
 
 	case p.topLevelAwaitKeyword.Len > 0:
 		return whyESMTopLevelAwait, []logger.MsgData{p.tracker.MsgData(p.topLevelAwaitKeyword,
@@ -17069,6 +17157,7 @@ func (p *parser) prepareForVisitPass() {
 	p.isFileConsideredToHaveESMExports =
 		p.esmExportKeyword.Len > 0 ||
 			p.esmImportMeta.Len > 0 ||
+			p.esmImportMetaResolve.Len > 0 ||
 			p.topLevelAwaitKeyword.Len > 0 ||
 			p.options.moduleTypeData.Type.IsESM()
 	p.isFileConsideredESM =
@@ -17523,7 +17612,7 @@ func (p *parser) toAST(before, parts, after []js_ast.Part, hashbang string, dire
 	usesExportsRef := p.symbols[p.exportsRef.InnerIndex].UseCountEstimate > 0
 	usesModuleRef := p.symbols[p.moduleRef.InnerIndex].UseCountEstimate > 0
 
-	if p.esmExportKeyword.Len > 0 || p.esmImportMeta.Len > 0 || p.topLevelAwaitKeyword.Len > 0 {
+	if p.esmExportKeyword.Len > 0 || p.esmImportMeta.Len > 0 || p.esmImportMetaResolve.Len > 0 || p.topLevelAwaitKeyword.Len > 0 {
 		exportsKind = js_ast.ExportsESM
 	} else if usesExportsRef || usesModuleRef || p.hasTopLevelReturn {
 		exportsKind = js_ast.ExportsCommonJS

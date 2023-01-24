@@ -26,6 +26,9 @@ const (
 	// An "import()" expression with a string argument
 	ImportDynamic
 
+	// An "import.meta.resolve()" expression with a string argument
+	ImportMetaResolve
+
 	// A call to "require.resolve()"
 	ImportRequireResolve
 
@@ -49,6 +52,8 @@ func (kind ImportKind) StringForMetafile() string {
 		return "dynamic-import"
 	case ImportRequireResolve:
 		return "require-resolve"
+	case ImportMetaResolve:
+		return "dynamic-import"
 	case ImportAt:
 		return "import-rule"
 	case ImportComposesFrom:

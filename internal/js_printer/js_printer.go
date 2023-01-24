@@ -2497,6 +2497,36 @@ func (p *printer) printExpr(expr js_ast.Expr, level js_ast.L, flags printExprFla
 			p.print(")")
 		}
 
+	case *js_ast.EImportMetaResolve:
+		// Just omit import assertions if they aren't supported
+		isMultiLine := !p.options.MinifyWhitespace &&
+			(p.willPrintExprCommentsAtLoc(e.Expr.Loc) ||
+				p.willPrintExprCommentsAtLoc(e.CloseParenLoc))
+		wrap := level >= js_ast.LNew || (flags&forbidCall) != 0
+		if wrap {
+			p.print("(")
+		}
+		p.printSpaceBeforeIdentifier()
+		p.addSourceMapping(expr.Loc)
+		p.print("import.meta.resolve(")
+		if isMultiLine {
+			p.printNewline()
+			p.options.Indent++
+			p.printIndent()
+		}
+		p.printExpr(e.Expr, js_ast.LComma, 0)
+
+		if isMultiLine {
+			p.printNewline()
+			p.printExprCommentsAfterCloseTokenAtLoc(e.CloseParenLoc)
+			p.options.Indent--
+			p.printIndent()
+		}
+		p.print(")")
+		if wrap {
+			p.print(")")
+		}
+
 	case *js_ast.EDot:
 		wrap := false
 		if e.OptionalChain == js_ast.OptionalChainNone {

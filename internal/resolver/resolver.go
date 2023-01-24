@@ -2269,7 +2269,7 @@ func (r resolverQuery) esmResolveAlgorithm(esmPackageName string, esmPackageSubp
 	// The condition set is determined by the kind of import
 	conditions := r.esmConditionsDefault
 	switch r.kind {
-	case ast.ImportStmt, ast.ImportDynamic:
+	case ast.ImportStmt, ast.ImportDynamic, ast.ImportMetaResolve:
 		conditions = r.esmConditionsImport
 	case ast.ImportRequire, ast.ImportRequireResolve:
 		conditions = r.esmConditionsRequire
