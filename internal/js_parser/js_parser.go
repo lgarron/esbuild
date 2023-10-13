@@ -3,7 +3,6 @@ package js_parser
 import (
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -3938,65 +3937,8 @@ func (p *parser) parseImportExpr(loc logger.Loc, level js_ast.L) js_ast.Expr {
 		if !p.lexer.IsContextualKeyword("meta") {
 			p.lexer.ExpectedString("\"meta\"")
 		}
-		loggerRange := logger.Range{Loc: loc, Len: p.lexer.Range().End() - loc.Start}
+		p.esmImportMeta = logger.Range{Loc: loc, Len: p.lexer.Range().End() - loc.Start}
 		p.lexer.Next()
-		// Handle `import.meta.resolve("[import path]")` (https://github.com/evanw/esbuild/issues/2866)
-		if p.lexer.Token == js_lexer.TDot {
-			fmt.Fprintln(os.Stderr, "dot next!")
-			p.lexer.Next()
-			if p.lexer.IsContextualKeyword("resolve") {
-				fmt.Fprintln(os.Stderr, "resolve!!")
-				p.lexer.Next()
-				p.lexer.Expect(js_lexer.TOpenParen)
-				fmt.Fprintln(os.Stderr, "paren!!!")
-				value := p.parseExpr(js_ast.LLowest)
-				closeParenLoc := p.saveExprCommentsHere()
-				p.lexer.Expect(js_lexer.TCloseParen)
-				p.esmImportMetaResolve = loggerRange
-				fmt.Fprintln(os.Stderr, "returning EImportMetaResolve…")
-				// return js_ast.Expr{Loc: loc, Data: &js_ast.EImportMetaResolve{
-				// 	Expr:          value,
-				// 	CloseParenLoc: closeParenLoc,
-				// }}
-				return p.maybeTransposeIfExprChain(e.Args[0], func(arg js_ast.Expr) js_ast.Expr {
-					if str, ok := e.Args[0].Data.(*js_ast.EString); ok {
-						// Ignore calls to require.resolve() if the control flow is provably
-						// dead here. We don't want to spend time scanning the required files
-						// if they will never be used.
-						if p.isControlFlowDead {
-							return js_ast.Expr{Loc: expr.Loc, Data: js_ast.ENullShared}
-						}
-
-						importRecordIndex := p.addImportRecord(ast.ImportRequireResolve, p.source.RangeOfString(e.Args[0].Loc), helpers.UTF16ToString(str.Value), nil, 0)
-						if p.fnOrArrowDataVisit.tryBodyCount != 0 {
-							record := &p.importRecords[importRecordIndex]
-							record.Flags |= ast.HandlesImportErrors
-							record.ErrorHandlerLoc = p.fnOrArrowDataVisit.tryCatchLoc
-						}
-						p.importRecordsForCurrentPart = append(p.importRecordsForCurrentPart, importRecordIndex)
-
-						// Create a new expression to represent the operation
-						return js_ast.Expr{Loc: expr.Loc, Data: &js_ast.ERequireResolveString{
-							ImportRecordIndex: importRecordIndex,
-							CloseParenLoc:     e.CloseParenLoc,
-						}}
-					}
-
-					// Otherwise just return a clone of the "require.resolve()" call
-					return js_ast.Expr{Loc: expr.Loc, Data: &js_ast.ECall{
-						Target: js_ast.Expr{Loc: e.Target.Loc, Data: &js_ast.EDot{
-							Target:  p.valueToSubstituteForRequire(t.Target.Loc),
-							Name:    t.Name,
-							NameLoc: t.NameLoc,
-						}},
-						Args:          []js_ast.Expr{arg},
-						Kind:          e.Kind,
-						CloseParenLoc: e.CloseParenLoc,
-					}}
-				}), exprOut{}
-			}
-			p.esmImportMeta = loggerRange
-		}
 		return js_ast.Expr{Loc: loc, Data: &js_ast.EImportMeta{RangeLen: p.esmImportMeta.Len}}
 	}
 
@@ -14307,13 +14249,14 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 			p.thenCatchChain.catchLoc = e.Args[1].Loc
 		}
 
-		// Prepare to recognize "require.resolve()" and "Object.create" calls
-		couldBeRequireResolve := false
+		// Prepare to recognize "require.resolve()", "import.meta.resolve()", and "Object.create" calls
+		couldBeRequireOrImportMetaResolve := false
 		couldBeObjectCreate := false
 		if len(e.Args) == 1 {
 			if dot, ok := e.Target.Data.(*js_ast.EDot); ok && dot.OptionalChain == js_ast.OptionalChainNone {
 				if p.options.mode != config.ModePassThrough && dot.Name == "resolve" {
-					couldBeRequireResolve = true
+					fmt.Println("couldBeRequireOrImportMetaResolve = true")
+					couldBeRequireOrImportMetaResolve = true
 				} else if dot.Name == "create" {
 					couldBeObjectCreate = true
 				}
@@ -14560,10 +14503,14 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 
 		case *js_ast.EDot:
 			// Recognize "require.resolve()" and "import.meta.resolve()" calls
-			if couldBeRequireResolve && t.Name == "resolve" {
+			if couldBeRequireOrImportMetaResolve && t.Name == "resolve" {
+				fmt.Println("couldBeRequireOrImportMetaResolve inside")
+				fmt.Printf("js_ast.EIdentifier %#v\n", t.Target.Data)
 				id, ok := t.Target.Data.(*js_ast.EIdentifier)
+				fmt.Printf("ok %s\n", ok)
 				// Recognize "require.resolve()" calls
 				if ok && id.Ref == p.requireRef {
+					fmt.Println("requireRef yes")
 					p.ignoreUsage(p.requireRef)
 					return p.maybeTransposeIfExprChain(e.Args[0], func(arg js_ast.Expr) js_ast.Expr {
 						if str, ok := e.Args[0].Data.(*js_ast.EString); ok {
@@ -14603,6 +14550,8 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 					}), exprOut{}
 				}
 				if ok && id.Ref == p.importMetaRef {
+					fmt.Println("importMeta yes")
+					fmt.Printf("Parsing importMeta")
 					p.ignoreUsage(p.importMetaRef)
 					return p.maybeTransposeIfExprChain(e.Args[0], func(arg js_ast.Expr) js_ast.Expr {
 						if str, ok := e.Args[0].Data.(*js_ast.EString); ok {
@@ -14641,6 +14590,7 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 						}}
 					}), exprOut{}
 				}
+				fmt.Println("neither resolve")
 			}
 
 			// Recognize "Object.create()" calls
