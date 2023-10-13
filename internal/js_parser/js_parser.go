@@ -14506,10 +14506,8 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 			if couldBeRequireOrImportMetaResolve && t.Name == "resolve" {
 				fmt.Println("couldBeRequireOrImportMetaResolve inside")
 				fmt.Printf("js_ast.EIdentifier %#v\n", t.Target.Data)
-				id, ok := t.Target.Data.(*js_ast.EIdentifier)
-				fmt.Printf("ok %s\n", ok)
 				// Recognize "require.resolve()" calls
-				if ok && id.Ref == p.requireRef {
+				if id, ok := t.Target.Data.(*js_ast.EIdentifier); ok && id.Ref == p.requireRef {
 					fmt.Println("requireRef yes")
 					p.ignoreUsage(p.requireRef)
 					return p.maybeTransposeIfExprChain(e.Args[0], func(arg js_ast.Expr) js_ast.Expr {
@@ -14549,10 +14547,10 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 						}}
 					}), exprOut{}
 				}
-				if ok && id.Ref == p.importMetaRef {
+				if _, ok := t.Target.Data.(*js_ast.EImportMeta); ok {
 					fmt.Println("importMeta yes")
-					fmt.Printf("Parsing importMeta")
-					p.ignoreUsage(p.importMetaRef)
+					fmt.Println("Parsing importMeta")
+					// p.ignoreUsage(p.importMetaRef)
 					return p.maybeTransposeIfExprChain(e.Args[0], func(arg js_ast.Expr) js_ast.Expr {
 						if str, ok := e.Args[0].Data.(*js_ast.EString); ok {
 							// Ignore calls to import.meta.resolve() if the control flow is provably
@@ -14570,6 +14568,8 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 							}
 							p.importRecordsForCurrentPart = append(p.importRecordsForCurrentPart, importRecordIndex)
 
+							fmt.Printf("new expr!\n")
+
 							// Create a new expression to represent the operation
 							return js_ast.Expr{Loc: expr.Loc, Data: &js_ast.EImportMetaResolveString{
 								ImportRecordIndex: importRecordIndex,
@@ -14577,10 +14577,12 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 							}}
 						}
 
-						// Otherwise just return a clone of the "require.resolve()" call
+						fmt.Printf("otherwise\n")
+
+						// Otherwise just return a clone of the "import.meta.resolve()" call
 						return js_ast.Expr{Loc: expr.Loc, Data: &js_ast.ECall{
 							Target: js_ast.Expr{Loc: e.Target.Loc, Data: &js_ast.EDot{
-								Target:  p.valueToSubstituteForRequire(t.Target.Loc),
+								Target:  p.valueToSubstituteForRequire(t.Target.Loc), // TODO
 								Name:    t.Name,
 								NameLoc: t.NameLoc,
 							}},

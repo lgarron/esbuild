@@ -1416,7 +1416,7 @@ func (p *printer) printRequireOrImportExpr(importRecordIndex uint32, level js_as
 
 	if !record.SourceIndex.IsValid() {
 		// External "require()"
-		if record.Kind != ast.ImportDynamic {
+		if record.Kind != ast.ImportDynamic && record.Kind != ast.ImportMetaResolve {
 			// Wrap this with a call to "__toESM()" if this is a CommonJS file
 			wrapWithToESM := record.Flags.Has(ast.WrapWithToESM)
 			if wrapWithToESM {
@@ -1465,9 +1465,15 @@ func (p *printer) printRequireOrImportExpr(importRecordIndex uint32, level js_as
 			return
 		}
 
-		// External "import()"
+		// External "import()" or "import.meta.resolve()"
+		fmt.Printf("record.Kind %s\n", record.Kind)
 		kind := ast.ImportDynamic
-		if !p.options.UnsupportedFeatures.Has(compat.DynamicImport) {
+		if record.Kind == ast.ImportMetaResolve {
+			p.print("import.meta.resolve(")
+			// TODO: if !p.options.UnsupportedFeatures.Has(compat.ImportMetaResolve) {
+			kind = ast.ImportMetaResolve
+			p.printSpaceBeforeIdentifier()
+		} else if !p.options.UnsupportedFeatures.Has(compat.DynamicImport) {
 			p.printSpaceBeforeIdentifier()
 			p.print("importTest4(")
 		} else {
@@ -1541,6 +1547,20 @@ func (p *printer) printRequireOrImportExpr(importRecordIndex uint32, level js_as
 
 	// Internal "import()" of async ESM
 	if record.Kind == ast.ImportDynamic && meta.IsWrapperAsync {
+		p.printSpaceBeforeIdentifier()
+		p.printIdentifier(p.renamer.NameForSymbol(meta.WrapperRef))
+		p.print("()")
+		if meta.ExportsRef != ast.InvalidRef {
+			p.printDotThenPrefix()
+			p.printSpaceBeforeIdentifier()
+			p.printIdentifier(p.renamer.NameForSymbol(meta.ExportsRef))
+			p.printDotThenSuffix()
+		}
+		return
+	}
+
+	// Internal "import.meta.resolve()" of ESM // TODO
+	if record.Kind == ast.ImportDynamic {
 		p.printSpaceBeforeIdentifier()
 		p.printIdentifier(p.renamer.NameForSymbol(meta.WrapperRef))
 		p.print("()")
