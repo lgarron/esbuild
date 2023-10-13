@@ -1598,7 +1598,7 @@ body {
     assert.deepStrictEqual(json.outputs[fileKey].inputs, { [makePath(file)]: { bytesInOutput: 14 } })
   },
 
-  async metafileSplittingRelativeNewURL({ esbuild, testDir }) {
+  async metafileSplittingRelativeImportMetaResolve({ esbuild, testDir }) {
     const entry = path.join(testDir, 'entry.js')
     const worker = path.join(testDir, 'worker.js')
     const outdir = path.join(testDir, 'out')

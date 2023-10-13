@@ -426,46 +426,47 @@ type Expr struct {
 // Go's type system.
 type E interface{ isExpr() }
 
-func (*EArray) isExpr()                {}
-func (*EUnary) isExpr()                {}
-func (*EBinary) isExpr()               {}
-func (*EBoolean) isExpr()              {}
-func (*ESuper) isExpr()                {}
-func (*ENull) isExpr()                 {}
-func (*EUndefined) isExpr()            {}
-func (*EThis) isExpr()                 {}
-func (*ENew) isExpr()                  {}
-func (*ENewTarget) isExpr()            {}
-func (*EImportMeta) isExpr()           {}
-func (*ECall) isExpr()                 {}
-func (*EDot) isExpr()                  {}
-func (*EIndex) isExpr()                {}
-func (*EArrow) isExpr()                {}
-func (*EFunction) isExpr()             {}
-func (*EClass) isExpr()                {}
-func (*EIdentifier) isExpr()           {}
-func (*EImportIdentifier) isExpr()     {}
-func (*EPrivateIdentifier) isExpr()    {}
-func (*ENameOfSymbol) isExpr()         {}
-func (*EJSXElement) isExpr()           {}
-func (*EMissing) isExpr()              {}
-func (*ENumber) isExpr()               {}
-func (*EBigInt) isExpr()               {}
-func (*EObject) isExpr()               {}
-func (*ESpread) isExpr()               {}
-func (*EString) isExpr()               {}
-func (*ETemplate) isExpr()             {}
-func (*ERegExp) isExpr()               {}
-func (*EInlinedEnum) isExpr()          {}
-func (*EAnnotation) isExpr()           {}
-func (*EAwait) isExpr()                {}
-func (*EYield) isExpr()                {}
-func (*EIf) isExpr()                   {}
-func (*ERequireString) isExpr()        {}
-func (*ERequireResolveString) isExpr() {}
-func (*EImportString) isExpr()         {}
-func (*EImportCall) isExpr()           {}
-func (*EImportMetaResolve) isExpr()    {}
+func (*EArray) isExpr()                   {}
+func (*EUnary) isExpr()                   {}
+func (*EBinary) isExpr()                  {}
+func (*EBoolean) isExpr()                 {}
+func (*ESuper) isExpr()                   {}
+func (*ENull) isExpr()                    {}
+func (*EUndefined) isExpr()               {}
+func (*EThis) isExpr()                    {}
+func (*ENew) isExpr()                     {}
+func (*ENewTarget) isExpr()               {}
+func (*EImportMeta) isExpr()              {}
+func (*ECall) isExpr()                    {}
+func (*EDot) isExpr()                     {}
+func (*EIndex) isExpr()                   {}
+func (*EArrow) isExpr()                   {}
+func (*EFunction) isExpr()                {}
+func (*EClass) isExpr()                   {}
+func (*EIdentifier) isExpr()              {}
+func (*EImportIdentifier) isExpr()        {}
+func (*EPrivateIdentifier) isExpr()       {}
+func (*ENameOfSymbol) isExpr()            {}
+func (*EJSXElement) isExpr()              {}
+func (*EMissing) isExpr()                 {}
+func (*ENumber) isExpr()                  {}
+func (*EBigInt) isExpr()                  {}
+func (*EObject) isExpr()                  {}
+func (*ESpread) isExpr()                  {}
+func (*EString) isExpr()                  {}
+func (*ETemplate) isExpr()                {}
+func (*ERegExp) isExpr()                  {}
+func (*EInlinedEnum) isExpr()             {}
+func (*EAnnotation) isExpr()              {}
+func (*EAwait) isExpr()                   {}
+func (*EYield) isExpr()                   {}
+func (*EIf) isExpr()                      {}
+func (*ERequireString) isExpr()           {}
+func (*ERequireResolveString) isExpr()    {}
+func (*EImportString) isExpr()            {}
+func (*EImportCall) isExpr()              {}
+func (*EImportMetaResolve) isExpr()       {}
+func (*EImportMetaResolveString) isExpr() {}
 
 type EArray struct {
 	Items            []Expr
@@ -856,6 +857,7 @@ type ERequireResolveString struct {
 	ImportRecordIndex uint32
 	CloseParenLoc     logger.Loc
 }
+
 type EImportString struct {
 	ImportRecordIndex uint32
 	CloseParenLoc     logger.Loc
@@ -870,6 +872,11 @@ type EImportCall struct {
 type EImportMetaResolve struct {
 	Expr          Expr
 	CloseParenLoc logger.Loc
+}
+
+type EImportMetaResolveString struct {
+	ImportRecordIndex uint32
+	CloseParenLoc     logger.Loc
 }
 
 type Stmt struct {

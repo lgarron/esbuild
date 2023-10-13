@@ -394,7 +394,9 @@ func parseFile(args parseArgs) {
 						case ast.ImportRequire:
 							prettyPath = fmt.Sprintf("require(%q)", prettyPath)
 						case ast.ImportDynamic:
-							prettyPath = fmt.Sprintf("import(%q)", prettyPath)
+							prettyPath = fmt.Sprintf("importTest3(%q)", prettyPath)
+						case ast.ImportMetaResolve:
+							prettyPath = fmt.Sprintf("import.meta.resolveTest2(%q)", prettyPath)
 						}
 						if results, msg := args.res.ResolveGlob(absResolveDir, record.GlobPattern.Parts, record.GlobPattern.Kind, prettyPath); results != nil {
 							if msg != nil {
@@ -2075,6 +2077,8 @@ func (s *scanner) generateResultForGlobResolve(
 			value.Data = &js_ast.EImportString{ImportRecordIndex: importRecordIndex}
 		case ast.ImportRequire:
 			value.Data = &js_ast.ERequireString{ImportRecordIndex: importRecordIndex}
+		case ast.ImportMetaResolve:
+			value.Data = &js_ast.EImportMetaResolveString{ImportRecordIndex: importRecordIndex}
 		default:
 			panic("Internal error")
 		}

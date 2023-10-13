@@ -1405,6 +1405,7 @@ func (p *printer) printQuotedUTF16(data []uint16, flags printQuotedFlags) {
 }
 
 func (p *printer) printRequireOrImportExpr(importRecordIndex uint32, level js_ast.L, flags printExprFlags, closeParenLoc logger.Loc) {
+	fmt.Println("printRequireOrImportExpr")
 	record := &p.importRecords[importRecordIndex]
 
 	if level >= js_ast.LNew || (flags&forbidCall) != 0 {
@@ -1468,7 +1469,7 @@ func (p *printer) printRequireOrImportExpr(importRecordIndex uint32, level js_as
 		kind := ast.ImportDynamic
 		if !p.options.UnsupportedFeatures.Has(compat.DynamicImport) {
 			p.printSpaceBeforeIdentifier()
-			p.print("import(")
+			p.print("importTest4(")
 		} else {
 			kind = ast.ImportRequire
 			p.printSpaceBeforeIdentifier()
@@ -2467,7 +2468,7 @@ func (p *printer) printExpr(expr js_ast.Expr, level js_ast.L, flags printExprFla
 		}
 		p.printSpaceBeforeIdentifier()
 		p.addSourceMapping(expr.Loc)
-		p.print("import(")
+		p.print("importsiness(")
 		if isMultiLine {
 			p.printNewline()
 			p.options.Indent++
@@ -2497,8 +2498,13 @@ func (p *printer) printExpr(expr js_ast.Expr, level js_ast.L, flags printExprFla
 			p.print(")")
 		}
 
+	case *js_ast.EImportMetaResolveString:
+		fmt.Println("Printing js_ast.EImportMetaResolveString")
+		p.addSourceMapping(expr.Loc)
+		p.printRequireOrImportExpr(e.ImportRecordIndex, level, flags, e.CloseParenLoc)
+
 	case *js_ast.EImportMetaResolve:
-		// Just omit import assertions if they aren't supported
+		fmt.Println("Printing EImportMetaResolve…")
 		isMultiLine := !p.options.MinifyWhitespace &&
 			(p.willPrintExprCommentsAtLoc(e.Expr.Loc) ||
 				p.willPrintExprCommentsAtLoc(e.CloseParenLoc))
@@ -2508,7 +2514,7 @@ func (p *printer) printExpr(expr js_ast.Expr, level js_ast.L, flags printExprFla
 		}
 		p.printSpaceBeforeIdentifier()
 		p.addSourceMapping(expr.Loc)
-		p.print("import.meta.resolve(")
+		p.print("import.meta.resolveyResolvey(")
 		if isMultiLine {
 			p.printNewline()
 			p.options.Indent++

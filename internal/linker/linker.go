@@ -3124,6 +3124,7 @@ func (c *linkerContext) treeShakingAndCodeSplitting() {
 }
 
 func (c *linkerContext) markFileReachableForCodeSplitting(sourceIndex uint32, entryPointBit uint, distanceFromEntryPoint uint32) {
+	fmt.Printf("markFileReachableForCodeSplitting: %d\n", sourceIndex)
 	file := &c.graph.Files[sourceIndex]
 	if !file.IsLive {
 		return
@@ -3152,7 +3153,7 @@ func (c *linkerContext) markFileReachableForCodeSplitting(sourceIndex uint32, en
 
 		// Traverse into all imported files
 		for _, record := range repr.AST.ImportRecords {
-			if record.SourceIndex.IsValid() && !c.isExternalDynamicImport(&record, sourceIndex) {
+			if record.SourceIndex.IsValid() && !c.isExternalDynamicImport(&record, sourceIndex) && !c.isExternalImportMetaResolve(&record, sourceIndex) {
 				c.markFileReachableForCodeSplitting(record.SourceIndex.GetIndex(), entryPointBit, distanceFromEntryPoint)
 			}
 		}
@@ -3244,6 +3245,13 @@ func (c *linkerContext) markFileLiveForTreeShaking(sourceIndex uint32) {
 func (c *linkerContext) isExternalDynamicImport(record *ast.ImportRecord, sourceIndex uint32) bool {
 	return c.options.CodeSplitting &&
 		record.Kind == ast.ImportDynamic &&
+		c.graph.Files[record.SourceIndex.GetIndex()].IsEntryPoint() &&
+		record.SourceIndex.GetIndex() != sourceIndex
+}
+
+func (c *linkerContext) isExternalImportMetaResolve(record *ast.ImportRecord, sourceIndex uint32) bool {
+	return c.options.CodeSplitting &&
+		record.Kind == ast.ImportMetaResolve &&
 		c.graph.Files[record.SourceIndex.GetIndex()].IsEntryPoint() &&
 		record.SourceIndex.GetIndex() != sourceIndex
 }

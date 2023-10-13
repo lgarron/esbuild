@@ -92,6 +92,7 @@ const (
 	ImportAssertions
 	ImportAttributes
 	ImportMeta
+	ImportMetaResolve
 	InlineScript
 	LogicalAssignment
 	NestedRestBinding
@@ -152,6 +153,7 @@ var StringToJSFeature = map[string]JSFeature{
 	"import-assertions":                 ImportAssertions,
 	"import-attributes":                 ImportAttributes,
 	"import-meta":                       ImportMeta,
+	"import-meta-resolve":               ImportMetaResolve,
 	"inline-script":                     InlineScript,
 	"logical-assignment":                LogicalAssignment,
 	"nested-rest-binding":               NestedRestBinding,
@@ -579,6 +581,16 @@ var jsTable = map[JSFeature]map[Engine][]versionRange{
 		Node:    {{start: v{10, 4, 0}}},
 		Opera:   {{start: v{51, 0, 0}}},
 		Safari:  {{start: v{11, 1, 0}}},
+	},
+	ImportMetaResolve: {
+		Chrome:  {{start: v{105, 0, 0}}},
+		Edge:    {{start: v{105, 0, 0}}},
+		ES:      {{start: v{2022, 0, 0}}},
+		Firefox: {{start: v{106, 0, 0}}},
+		IOS:     {{start: v{16, 4, 0}}},
+		Node:    {{start: v{20, 6, 0}}},
+		Opera:   {{start: v{91, 0, 0}}},
+		Safari:  {{start: v{16, 4, 0}}},
 	},
 	InlineScript: {},
 	LogicalAssignment: {
